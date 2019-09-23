@@ -1,0 +1,12 @@
+- create a cube
+- lights
+- shadows
+- cube material
+- 3-level cube array
+- transparent cube
+- camera movements
+- cube movement
+- cube movement control
+- visual controls
+- snake
+- add webgl support check
