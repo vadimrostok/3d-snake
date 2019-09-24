@@ -1,14 +1,36 @@
 {
   "name": "3d-snake",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "3D snake for 3D people",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "watchify src/main.js -o build/bundle.js -dv -p livereactload & serve ./"
   },
-  "author": "",
+  "browserify": {
+    "transform": [
+      [
+        "babelify",
+        {
+          "presets": [
+            "@babel/preset-env"
+          ]
+        }
+      ]
+    ]
+  },
+  "author": "Vadym Rostok",
   "license": "ISC",
   "dependencies": {
+    "@babel/polyfill": "^7.6.0",
     "three": "^0.108.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.6.2",
+    "@babel/core": "^7.6.2",
+    "@babel/preset-env": "^7.6.2",
+    "babelify": "^10.0.0",
+    "browserify": "^16.5.0",
+    "livereactload": "^3.5.0",
+    "serve": "^11.1.0",
+    "watchify": "^3.11.1"
   }
 }
