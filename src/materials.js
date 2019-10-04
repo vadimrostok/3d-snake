@@ -3,6 +3,7 @@ import { MeshPhongMaterial, MeshPhysicalMaterial, DoubleSide, FrontSide } from '
 export const RedPhong = new MeshPhongMaterial( {
   color: 0xff0000, emissive: 0x072534, side: DoubleSide, flatShading: true
 } );
+
 export const TransBlue = new MeshPhysicalMaterial({
   color: 0x156289, emissive: 0x072534, side: FrontSide, flatShading: false,
   transparency: 0.80,

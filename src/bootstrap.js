@@ -2,9 +2,12 @@ import Game from './game.js';
 
 const game = new Game();
 
+game.initialize();
+
 const animate = function() {
-  window.requestAnimationFrame(animate);
-  game.onFrame();
+  if (game.onFrame()) {
+    window.requestAnimationFrame(animate);
+  };
 };
 
 animate();
