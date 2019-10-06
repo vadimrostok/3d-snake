@@ -5,130 +5,85 @@ import { getBoardHeight } from './helpers';
 
 const coneGeometry = new ConeGeometry( guideConeWidth, guideConeHeight, 12 );
 
-export function addGuides(scene) {
-  const guideLength = getBoardHeight() - guideConeHeight*2;
-  const halfBoardLength = getBoardHeight()/2;
-  const xGeometry = new BoxGeometry( guideLength, cubeSize/10, cubeSize/10 );
-  const yGeometry = new BoxGeometry( cubeSize/10, guideLength, cubeSize/10 );
-  const zGeometry = new BoxGeometry( cubeSize/10, cubeSize/10, guideLength );
+const guideLength = getBoardHeight(); //- guideConeHeight*2;
+const halfGuideLength = guideLength/2;
+const guideWidth = cubeSize/10;
+const halfGuideWidth = guideWidth/2;
+const halfBoardLength = getBoardHeight()/2;
+const halfConeWidth = guideConeWidth/2;
 
+function getArrowShape() {
+  const arrow = new Shape();
+  
+  arrow.moveTo(guideWidth/2, 0);
+  arrow.lineTo(guideWidth/2, guideLength/2 - guideConeHeight);
+  arrow.lineTo(guideConeWidth/2, guideLength/2 - guideConeHeight);
+  arrow.lineTo(0, guideLength/2);
+  arrow.lineTo(-guideConeWidth/2, guideLength/2 - guideConeHeight);
+  arrow.lineTo(-guideWidth/2, guideLength/2 - guideConeHeight);
+
+  arrow.lineTo(-guideWidth/2, -guideLength/2 + guideConeHeight);
+  arrow.lineTo(-guideConeWidth/2, -guideLength/2 + guideConeHeight);
+  arrow.lineTo(0, -guideLength/2);
+
+  arrow.lineTo(guideConeWidth/2, -guideLength/2 + guideConeHeight);
+  arrow.lineTo(guideWidth/2, -guideLength/2 + guideConeHeight);
+
+  return arrow;
+}
+
+export function addGuides(scene) {
   const dimensions = {
     x: {
-      geometry: xGeometry,
       material: GuideGreen,
-      coneMaterial: GuideGreen,
       position(y, z) {
-        return [0, y*halfBoardLength, z*halfBoardLength];
+        return [0, y*(halfBoardLength + padding), z*(halfBoardLength + padding)];
       },
-      coneRotation(coneDirection) {
-        return [0, 0, -coneDirection*Math.PI/2];
-      },
-      conePosition(coneDirection) {
-        return [coneDirection*(getBoardHeight()/2 - guideConeHeight/2), 0, 0];
+      rotation() {
+        return [0, 0, Math.PI/2];
       }
     },
     y: {
-      geometry: yGeometry,
       material: GuidePink,
-      coneMaterial: GuidePink,
       position(x, z) {
-        return [x*halfBoardLength, 0, z*halfBoardLength];
+        return [x*(halfBoardLength + padding), 0, z*(halfBoardLength + padding)];
       },
-      coneRotation(coneDirection) {
-        return [0, 0, Math.PI/2 - coneDirection*Math.PI/2];
-      },
-      conePosition(coneDirection) {
-        return [0, coneDirection*(getBoardHeight()/2 - guideConeHeight/2), 0];
+      rotation() {
+        return [0, 0, 0];
       }
     },
     z: {
-      geometry: zGeometry,
       material: GuideGreen,
-      coneMaterial: GuideGreen,
       position(x, y) {
-        return [x*halfBoardLength, y*halfBoardLength, 0];
+        return [x*(halfBoardLength + padding), y*(halfBoardLength + padding), 0];
       },
-      coneRotation(coneDirection) {
-        return [coneDirection*Math.PI/2, 0, 0];
-      },
-      conePosition(coneDirection) {
-        return [0, 0, coneDirection*(getBoardHeight()/2 - guideConeHeight/2)];
+      rotation() {
+        return [Math.PI/2, Math.PI/2, 0];
       }
     }
   };
 
   return Object.keys(dimensions).map(dimension => {
-    const {
-      geometry, material, position, conePosition, coneMaterial, coneRotation,
-    } = dimensions[dimension];
+    const { material, position, rotation } = dimensions[dimension];
     return [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([otherDimension1, otherDimension2]) => {
-      const guide = new Mesh( geometry, material );
+      const guide = new Mesh( new ShapeGeometry(getArrowShape()), material );
       guide.position.set(...position(otherDimension1, otherDimension2));
-
-      // const arrow = new Shape();
-      // arrow.moveTo(0,0);
-      // arrow.lineTo(0,0.5);
-      // arrow.lineTo(0.5,0);
-      // arrow.lineTo(0,-0.5);
-      // guide.add(new Mesh( new ShapeGeometry(arrow), coneMaterial ));
-
-      [-1, 1].map(coneDirection => {
-        const cone = new Mesh( coneGeometry, coneMaterial );
-        cone.rotation.set(...coneRotation(coneDirection));
-        cone.position.set(...conePosition(coneDirection));
-        guide.add( cone );
-      });
-
-      scene.add( guide );
+      guide.rotation.set(...rotation(otherDimension1, otherDimension2));
+      scene.add(guide);
       return guide;
     }).flat();
   });
-
-  // const xGuides = [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([y, z]) => {
-  //   const guide = new Mesh( xGeometry, GuideGreen );
-  //   guide.position.set(
-  //     0, y*getBoardHeight()/2, z*getBoardHeight()/2
-  //   );
-  //   scene.add( guide );
-  //   return guide;
-  // }).flat();
-  
-  const yGuides = [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([x, z]) => {
-    const guide = new Mesh( yGeometry, GuidePink );
-    guide.position.set(
-      x*getBoardHeight()/2, 0, z*getBoardHeight()/2
-    );
-
-    [-1, 1].map(coneDirection => {
-      const cone = new Mesh( coneGeometry, GuidePink );
-      cone.rotation.z = Math.PI/2 - coneDirection*Math.PI/2;
-      cone.position.set(0, coneDirection*(getBoardHeight()/2 - guideConeHeight/2), 0);
-      guide.add( cone );
-    });
-
-    scene.add( guide );
-    return guide;
-  }).flat();
-
-  const zGuides = [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([x, y]) => {
-    const guide = new Mesh( zGeometry, GuideGreen );
-    guide.position.set(
-      x*getBoardHeight()/2, y*getBoardHeight()/2, 0
-    );
-    scene.add( guide );
-    return guide;
-  }).flat();
-  
-  return [xGuides, yGuides, zGuides];
 }
 
-export function updateGuidesVisibility([xGuides, yGuides, zGuides], yRotation) {
+
+export function updateGuides([xGuides, yGuides, zGuides], azimuthalRotationRads, polarRotation) {
+  const azimuthalRotation = azimuthalRotationRads*180/Math.PI;
   [xGuides, yGuides, zGuides].flat().forEach(guide => guide.visible = false);
   const angles = [
-    (yRotation > -45) && (yRotation <= 135),
-    (yRotation > -135) && (yRotation <= 45),
-    (yRotation > 135) || (yRotation <= -45),
-    (yRotation > 45) || (yRotation <= -135)
+    (azimuthalRotation > -45) && (azimuthalRotation <= 135),
+    (azimuthalRotation > -135) && (azimuthalRotation <= 45),
+    (azimuthalRotation > 135) || (azimuthalRotation <= -45),
+    (azimuthalRotation > 45) || (azimuthalRotation <= -135)
   ];
 
   yGuides[0].visible = angles[0];
@@ -143,5 +98,10 @@ export function updateGuidesVisibility([xGuides, yGuides, zGuides], yRotation) {
   yGuides[3].visible = angles[3];
   zGuides[0].visible = zGuides[3].visible = angles[3] && angles[0];
 
-  console.log(...angles);
+  yGuides[0].rotation.y = yGuides[1].rotation.y =
+    yGuides[2].rotation.y = yGuides[3].rotation.y = azimuthalRotationRads;
+  xGuides[0].rotation.x = xGuides[1].rotation.x = Math.PI/2 + polarRotation;
+  xGuides[2].rotation.x = xGuides[3].rotation.x = Math.PI/2 - polarRotation;
+  zGuides[0].rotation.y = zGuides[3].rotation.y = -polarRotation;
+  zGuides[1].rotation.y = zGuides[2].rotation.y = polarRotation;
 }

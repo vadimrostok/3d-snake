@@ -1,7 +1,7 @@
 import throttle from 'lodash/throttle';
 import * as THREE from 'three';
 import { OrbitControls } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
-import { staticLights } from './lights';
+import { staticLights, addHeadLight } from './lights';
 import { size, padding, sideSize,
          DIRECTION_xUP, DIRECTION_xDOWN,
          DIRECTION_yUP, DIRECTION_yDOWN,
@@ -9,7 +9,7 @@ import { size, padding, sideSize,
        } from './config';
 import { getPosition, boardPositionToCoordinates } from './helpers';
 import { addCubes, addHead, moveSnake } from './board';
-import { addGuides, updateGuidesVisibility } from './guides';
+import { addGuides, updateGuides } from './guides';
 
 const TYPE_EMPTY = 0;
 const TYPE_BODY = 1;
@@ -58,8 +58,15 @@ export default function Game () {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
-  const renderer = new THREE.WebGLRenderer();
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize( window.innerWidth, window.innerHeight );
+
+  scene.background = new THREE.Color( 0x342326 );
+  scene.fog = new THREE.Fog( 0x040306, 1, 30 );
+
+  // renderer.shadowMap.enabled = true;
+  // renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
   document.body.appendChild( renderer.domElement );
 
   staticLights.map(light => scene.add(light));
@@ -73,9 +80,11 @@ export default function Game () {
 
   let headPosition = [0,0,0];
   const head = addHead(scene, headPosition);
+  const headLight = addHeadLight();
 
   // FIXME:
   window.head = head;
+  window.headLight = headLight;
   window.cubeMap = cubeMap;
   window.canvas = renderer.domElement;
   window.camera = camera;
@@ -91,8 +100,9 @@ export default function Game () {
   const logNode = document.querySelector('#log');
   function log() {
     const toLog = {};
-    toLog.angle = controls.getAzimuthalAngle();
-    toLog.angleDeg = toLog.angle*180/Math.PI;
+    //toLog.angle = controls.getAzimuthalAngle();
+    toLog.AzimuthalAngleDeg = controls.getAzimuthalAngle()*180/Math.PI;
+    toLog.PolarAngleDeg = controls.getPolarAngle()*180/Math.PI;
 
     const logStr = Object.keys(toLog).map((key) => `${key}: ${toLog[key].toFixed(3)}<br />`).join('');
     logNode.innerHTML = logStr;
@@ -107,21 +117,23 @@ export default function Game () {
       });
       controls.domElement.addEventListener('mousemove', throttle(function (e) {
         if (e.buttons === 1) {
-          updateGuidesVisibility(
+          updateGuides(
             [xGuides, yGuides, zGuides],
-            controls.getAzimuthalAngle()*180/Math.PI
+            controls.getAzimuthalAngle(),
+            controls.getPolarAngle()
           );
         }
       }, 100));
       controls.update();
-      updateGuidesVisibility(
+      updateGuides(
         [xGuides, yGuides, zGuides],
-        controls.getAzimuthalAngle()*180/Math.PI
+        controls.getAzimuthalAngle(),
+        controls.getPolarAngle()
       );
     },
     tick() {},
     move() {
-      [theEnd, headPosition] = moveSnake(cubeMap, head, headPosition, currentDirection);
+      [theEnd, headPosition] = moveSnake(cubeMap, head, headLight, headPosition, currentDirection);
       if (theEnd) {
         document.querySelector('#the-end').style.display = 'block';
       }

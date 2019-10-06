@@ -19,5 +19,5 @@ export const DIRECTION_xDOWN = 4;
 export const DIRECTION_yUP = 5;
 export const DIRECTION_yDOWN = 6;
 
-export const guideConeWidth = cubeSize/5;
+export const guideConeWidth = cubeSize/2;
 export const guideConeHeight = cubeSize/2;
