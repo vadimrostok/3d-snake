@@ -1,3 +1,4 @@
+import throttle from 'lodash/throttle';
 import * as THREE from 'three';
 import { OrbitControls } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { staticLights } from './lights';
@@ -8,6 +9,7 @@ import { size, padding, sideSize,
        } from './config';
 import { getPosition, boardPositionToCoordinates } from './helpers';
 import { addCubes, addHead, moveSnake } from './board';
+import { addGuides, updateGuidesVisibility } from './guides';
 
 const TYPE_EMPTY = 0;
 const TYPE_BODY = 1;
@@ -63,9 +65,11 @@ export default function Game () {
   staticLights.map(light => scene.add(light));
 
   const controls = new OrbitControls( camera, renderer.domElement );
+  controls.update();
   controls.enableKeys = false;
 
   const cubeMap = addCubes(scene);
+  const [xGuides, yGuides, zGuides] = addGuides(scene);
 
   let headPosition = [0,0,0];
   const head = addHead(scene, headPosition);
@@ -76,6 +80,7 @@ export default function Game () {
   window.canvas = renderer.domElement;
   window.camera = camera;
   window.controls = controls;
+  window.guides = zGuides;
 
   const multiplier = 2;
   camera.position.set(0, 0, -size*multiplier);
@@ -100,6 +105,19 @@ export default function Game () {
       }, () => {
         this.move();
       });
+      controls.domElement.addEventListener('mousemove', throttle(function (e) {
+        if (e.buttons === 1) {
+          updateGuidesVisibility(
+            [xGuides, yGuides, zGuides],
+            controls.getAzimuthalAngle()*180/Math.PI
+          );
+        }
+      }, 100));
+      controls.update();
+      updateGuidesVisibility(
+        [xGuides, yGuides, zGuides],
+        controls.getAzimuthalAngle()*180/Math.PI
+      );
     },
     tick() {},
     move() {
@@ -109,8 +127,6 @@ export default function Game () {
       }
     },
     update() {
-      controls.update();
-
       renderer.render( scene, camera );
     },
     onFrame: (function() {
@@ -119,9 +135,9 @@ export default function Game () {
       let timeDiff = 0;
       let logTimeDiff = 0;
 
-      //const moveUpdateInterval = 10000;
+      const moveUpdateInterval = 10000;
       // FIXME:
-      const moveUpdateInterval = 1000;
+      //const moveUpdateInterval = 1000;
 
       const logUpdateInterval = 100;
 

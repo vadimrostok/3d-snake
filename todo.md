@@ -5,8 +5,10 @@
 +/- shadows
 +/- cube material
 +/- transparent cube
+- show turn controls and guides
+- controls cube opacity depending on its position
 - make head the main light source
-- camera movements
++/- camera movements
 - cube movement control
 - visual controls
 - snake

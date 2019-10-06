@@ -1,9 +1,13 @@
 import { SphereGeometry, MeshPhongMaterial, Mesh, DoubleSide } from 'three';
-import { size, sideSize, padding } from './config';
+import { size, cubeSize, padding } from './config';
 import { RedPhong } from './materials';
 
+export function getBoardHeight() {
+  return size*cubeSize + size*cubeSize*padding;
+}
+
 export function getPosition(dimension) {
-  return -size*(sideSize + padding)/2 + dimension*(sideSize + padding) + (sideSize + padding)/2;
+  return -size*(cubeSize + padding)/2 + dimension*(cubeSize + padding) + (cubeSize + padding)/2;
 }
 
 export function boardPositionToCoordinates([a, b, c]) {
