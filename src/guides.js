@@ -1,6 +1,6 @@
 import { BoxGeometry, ConeGeometry, Mesh, Shape, ShapeGeometry } from 'three';
 import { GuidePink, GuideGreen } from './materials';
-import { size, cubeSize, padding, guideConeWidth, guideConeHeight } from './config';
+import { boardSize, cubeSize, padding, guideConeWidth, guideConeHeight } from './config';
 import { getBoardHeight } from './helpers';
 
 const coneGeometry = new ConeGeometry( guideConeWidth, guideConeHeight, 12 );

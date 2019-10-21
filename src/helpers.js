@@ -1,13 +1,13 @@
 import { SphereGeometry, MeshPhongMaterial, Mesh, DoubleSide } from 'three';
-import { size, cubeSize, padding } from './config';
+import { boardSize, cubeSize, padding } from './config';
 import { RedPhong } from './materials';
 
 export function getBoardHeight() {
-  return size*cubeSize + size*cubeSize*padding;
+  return boardSize*cubeSize + boardSize*cubeSize*padding;
 }
 
 export function getPosition(dimension) {
-  return -size*(cubeSize + padding)/2 + dimension*(cubeSize + padding) + (cubeSize + padding)/2;
+  return -boardSize*(cubeSize + padding)/2 + dimension*(cubeSize + padding) + (cubeSize + padding)/2;
 }
 
 export function boardPositionToCoordinates([a, b, c]) {
@@ -21,5 +21,5 @@ export function addSphere(scene, position = [0, 0, 0]) {
 }
 
 export function checkBoundariesHit(x, y, z) {
-  return x < 0 || x >= size || y < 0 || y >= size || z < 0 || z >= size;
+  return x < 0 || x >= boardSize || y < 0 || y >= boardSize || z < 0 || z >= boardSize;
 }

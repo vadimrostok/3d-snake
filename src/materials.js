@@ -1,10 +1,16 @@
 import {
   MeshPhongMaterial, MeshBasicMaterial, MeshPhysicalMaterial, DoubleSide, FrontSide,
-  MeshStandardMaterial,
+  MeshStandardMaterial, LineDashedMaterial,
 } from 'three';
 
-export const RedPhong = new MeshPhongMaterial( {
-  color: 0xff0000, emissive: 0x072534, side: DoubleSide, flatShading: true
+import { cubeSize, cubePointKoef } from './config';
+
+export const SnakeHead = new MeshBasicMaterial( {
+  color: 0xffaa00, emissive: 0x072534, side: DoubleSide, flatShading: true, fog: false,
+} );
+
+export const SnakeTail = new MeshBasicMaterial( {
+  color: 0xdd8800, emissive: 0x072534, side: DoubleSide, flatShading: true, fog: false,
 } );
 
 export const GuidePink = new MeshBasicMaterial( {
@@ -19,10 +25,8 @@ export const GuideGreen = new MeshBasicMaterial( {
   opacity: 0.6,
 } );
 
-export const TransBlue = new MeshStandardMaterial({
-  roughness: 0.5, metalness: 1.0 ,
-  color: 0x156289,
-  // side: DoubleSide,
-  // transparent: true,
-  // opacity: 0.2,
-}); 
+export const Dashed = new LineDashedMaterial({
+  color: 0xffaa00,
+  dashSize: cubeSize*cubePointKoef*cubePointKoef,
+  gapSize: cubeSize*cubePointKoef*cubePointKoef/3,
+});

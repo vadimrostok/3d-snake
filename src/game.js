@@ -2,13 +2,13 @@ import throttle from 'lodash/throttle';
 import * as THREE from 'three';
 import { OrbitControls } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
 import { staticLights, addHeadLight } from './lights';
-import { size, padding, sideSize,
+import { boardSize, padding, sideSize,
          DIRECTION_xUP, DIRECTION_xDOWN,
          DIRECTION_yUP, DIRECTION_yDOWN,
          DIRECTION_zUP, DIRECTION_zDOWN, 
        } from './config';
 import { getPosition, boardPositionToCoordinates } from './helpers';
-import { addCubes, addHead, moveSnake } from './board';
+import { addCubes, addHead, addTail, moveSnake } from './board';
 import { addGuides, updateGuides } from './guides';
 
 const TYPE_EMPTY = 0;
@@ -72,18 +72,24 @@ export default function Game () {
   staticLights.map(light => scene.add(light));
 
   const controls = new OrbitControls( camera, renderer.domElement );
+  controls.enableZoom = false;
   controls.update();
   controls.enableKeys = false;
 
   const cubeMap = addCubes(scene);
   const [xGuides, yGuides, zGuides] = addGuides(scene);
 
-  let headPosition = [0,0,0];
+  let headPosition = [Math.floor(boardSize/3), Math.floor(boardSize/3), Math.floor(boardSize/3)];
   const head = addHead(scene, headPosition);
+  let tail = [
+    addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 1]),
+    addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 2])
+  ];
   const headLight = addHeadLight();
 
   // FIXME:
   window.head = head;
+  window.tail = tail;
   window.headLight = headLight;
   window.cubeMap = cubeMap;
   window.canvas = renderer.domElement;
@@ -92,7 +98,7 @@ export default function Game () {
   window.guides = zGuides;
 
   const multiplier = 2;
-  camera.position.set(0, 0, -size*multiplier);
+  camera.position.set(0, 0, -boardSize*multiplier);
 
   let theEnd = false;
   let currentDirection = DIRECTION_xUP;
@@ -110,6 +116,7 @@ export default function Game () {
 
   return {
     initialize() {
+      this.move();
       trackDirectionChanges(() => controls.getAzimuthalAngle()*180/Math.PI, (newDirection) => {
         currentDirection = newDirection;
       }, () => {
@@ -133,7 +140,7 @@ export default function Game () {
     },
     tick() {},
     move() {
-      [theEnd, headPosition] = moveSnake(cubeMap, head, headLight, headPosition, currentDirection);
+      [theEnd, headPosition, tail] = moveSnake(cubeMap, head, tail, headLight, headPosition, currentDirection);
       if (theEnd) {
         document.querySelector('#the-end').style.display = 'block';
       }
