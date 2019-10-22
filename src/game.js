@@ -7,8 +7,8 @@ import { boardSize, padding, sideSize,
          DIRECTION_yUP, DIRECTION_yDOWN,
          DIRECTION_zUP, DIRECTION_zDOWN, 
        } from './config';
-import { getPosition, boardPositionToCoordinates } from './helpers';
-import { addCubes, addHead, addTail, moveSnake } from './board';
+import { getRealPosition, boardPositionToCoordinates } from './helpers';
+import { addCubes, addHead, createNewFood, addTail, moveSnake } from './board';
 import { addGuides, updateGuides } from './guides';
 
 const TYPE_EMPTY = 0;
@@ -55,6 +55,12 @@ function trackDirectionChanges(getAngle, onChange, doExtraMove) {
 }
 
 export default function Game () {
+  let time;
+  const resetTime = function () {
+    time = (new Date).getTime();
+  };
+  resetTime();
+  
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
@@ -62,10 +68,7 @@ export default function Game () {
   renderer.setSize( window.innerWidth, window.innerHeight );
 
   scene.background = new THREE.Color( 0x342326 );
-  scene.fog = new THREE.Fog( 0x040306, 1, 30 );
-
-  // renderer.shadowMap.enabled = true;
-  // renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+  scene.fog = new THREE.Fog( 0x040306, 1, 150 );
 
   document.body.appendChild( renderer.domElement );
 
@@ -73,6 +76,7 @@ export default function Game () {
 
   const controls = new OrbitControls( camera, renderer.domElement );
   controls.enableZoom = false;
+  controls.enablePan = false;
   controls.update();
   controls.enableKeys = false;
 
@@ -85,12 +89,11 @@ export default function Game () {
     addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 1]),
     addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 2])
   ];
-  const headLight = addHeadLight();
+  let [foodPosition, food] = createNewFood(scene, headPosition, tail);
 
   // FIXME:
   window.head = head;
   window.tail = tail;
-  window.headLight = headLight;
   window.cubeMap = cubeMap;
   window.canvas = renderer.domElement;
   window.camera = camera;
@@ -120,6 +123,7 @@ export default function Game () {
       trackDirectionChanges(() => controls.getAzimuthalAngle()*180/Math.PI, (newDirection) => {
         currentDirection = newDirection;
       }, () => {
+        resetTime();
         this.move();
       });
       controls.domElement.addEventListener('mousemove', throttle(function (e) {
@@ -140,7 +144,14 @@ export default function Game () {
     },
     tick() {},
     move() {
-      [theEnd, headPosition, tail] = moveSnake(cubeMap, head, tail, headLight, headPosition, currentDirection);
+      [theEnd, headPosition, foodPosition, tail] = moveSnake({
+        cubeMap,
+        head, headPosition,
+        tail,
+        food, foodPosition,
+        direction: currentDirection,
+        scene,
+      });
       if (theEnd) {
         document.querySelector('#the-end').style.display = 'block';
       }
@@ -149,7 +160,7 @@ export default function Game () {
       renderer.render( scene, camera );
     },
     onFrame: (function() {
-      let time = (new Date).getTime();
+      resetTime();
       let logTime = (new Date).getTime();
       let timeDiff = 0;
       let logTimeDiff = 0;
@@ -166,7 +177,7 @@ export default function Game () {
         logTimeDiff = newTime - logTime;
 
         if (timeDiff >= moveUpdateInterval) {
-          time = newTime;
+          resetTime();
           this.move();
         }
 

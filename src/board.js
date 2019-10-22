@@ -1,10 +1,14 @@
 import range from 'lodash/range';
+import without from 'lodash/without';
 import {
   BoxGeometry, Mesh, WireframeGeometry, LineSegments, BufferGeometry,
   Float32BufferAttribute,
 } from 'three';
-import { SnakeHead, SnakeTail, Dashed } from './materials';
-import { getPosition, checkBoundariesHit } from './helpers';
+import { SnakeHead, SnakeTail, Food, Dashed } from './materials';
+import {
+  getRealPosition, checkBoundariesHit, eqPositions, resetNearPlaceholderCubesOpacity,
+  changeNearPlaceholderCubesOpacity, getBoardPosition,
+} from './helpers';
 import { cubeSize, boardSize, cubePointKoef,
          DIRECTION_xUP, DIRECTION_xDOWN,
          DIRECTION_yUP, DIRECTION_yDOWN,
@@ -33,7 +37,7 @@ export function addCubes(scene) {
         cube.material.opacity = cubePointDefaultOpacity;
 
         cube.position.set(
-          getPosition(x), getPosition(y), getPosition(z)
+          getRealPosition(x), getRealPosition(y), getRealPosition(z)
         );
 
         scene.add( cube );
@@ -49,33 +53,58 @@ export function addCubes(scene) {
 export function addHead(scene, initialHeadPosition) {
   const geometry = new BoxGeometry( cubeSize, cubeSize, cubeSize );
   const cube = new Mesh( geometry, SnakeHead );
-  cube.position.set(...initialHeadPosition.map(getPosition));
+  cube.position.set(...initialHeadPosition.map(getRealPosition));
   scene.add( cube );
   return cube;
+}
+
+const getRandomPosition = (...occupied) => {
+  const items = without(range(0, boardSize), ...occupied);
+  return items[Math.round(Math.random()*(items.length - 1))];
+};
+
+export function createNewFood(scene, headPosition, tail) {
+  const geometry = new BoxGeometry( cubeSize, cubeSize, cubeSize );
+  const cube = new Mesh( geometry, Food );
+  const position = [
+    getRandomPosition(headPosition[0], ...tail.map(item => item.position.x)),
+    getRandomPosition(headPosition[1], ...tail.map(item => item.position.y)),
+    getRandomPosition(headPosition[2], ...tail.map(item => item.position.z))
+  ];
+  cube.position.set(...position.map(getRealPosition));
+  scene.add( cube );
+  return [position, cube];
+}
+
+export function updateFoodPosition(food, headPosition, tail) {
+  const position = [
+    getRandomPosition(headPosition[0], ...tail.map(item => item.position.x)),
+    getRandomPosition(headPosition[1], ...tail.map(item => item.position.y)),
+    getRandomPosition(headPosition[2], ...tail.map(item => item.position.z))
+  ];
+  food.position.set(...position.map(getRealPosition));
+  return position;
 }
 
 export function addTail(scene, position) {
   const geometry = new BoxGeometry( cubeSize, cubeSize, cubeSize );
   const cube = new Mesh( geometry, SnakeTail );
-  cube.position.set(...position.map(getPosition));
+  cube.position.set(...position.map(getRealPosition));
   scene.add( cube );
   return cube;
 }
 
-let previousRunSurroundingCubes = [];
-export function moveSnake(cubeMap, head, tail, headLight, headPosition, direction) {
-  //cubeMap[headPosition[0]][headPosition[1]][headPosition[2]].visible = true;
-  previousRunSurroundingCubes.map(cube => cube.material.opacity = cubePointDefaultOpacity);
-  previousRunSurroundingCubes = [];
-
+function moveTail(tail, headPosition) {
   range(0, tail.length).reverse().forEach((index) => {
     if (tail[index - 1]) {
       tail[index].position.set(...tail[index - 1].position.toArray());
     } else {
-      tail[index].position.set(...headPosition.map(getPosition));
+      tail[index].position.set(...headPosition.map(getRealPosition));
     }
   });
+}
 
+function moveHead(direction, headPosition) {
   switch(direction) {
   case DIRECTION_xUP:
     headPosition[0] += 1;
@@ -96,32 +125,48 @@ export function moveSnake(cubeMap, head, tail, headLight, headPosition, directio
     headPosition[2] -= 1;
     break;
   }
-  if (checkBoundariesHit(...headPosition)) {
-    return [true];
-  } else {
-    head.position.set(...headPosition.map(getPosition));
-    headLight.position.set(...headPosition.map(getPosition));
-    cubeMap[headPosition[0]][headPosition[1]][headPosition[2]].visible = false;
-    const closenessOpacityMap = range(-cubePointNearLevel, cubePointNearLevel + 1);
-    closenessOpacityMap.map(x => closenessOpacityMap.map(y => closenessOpacityMap.map(z => {
-      const xPosition = headPosition[0] + x;
-      const yPosition = headPosition[1] + y;
-      const zPosition = headPosition[2] + z;
-      if (cubeMap[xPosition] &&
-          cubeMap[xPosition][yPosition] &&
-          cubeMap[xPosition][yPosition][zPosition]) {
-        const cube = cubeMap[xPosition][yPosition][zPosition];
-        previousRunSurroundingCubes.push(cube);
-        const closenessKoef = (cubePointNearLevel*3 - Math.abs(x) - Math.abs(y) - Math.abs(z)) /
-              (cubePointNearLevel*3);
-        cube.material.opacity = cubePointDefaultOpacity +
-          (1 - cubePointDefaultOpacity)*closenessKoef;
-      }
-    })));
-    return [false, headPosition, tail];
-  }
-};
 
+}
+
+let previousRunSurroundingCubes = [];
+export function moveSnake({
+  cubeMap,
+  head, headPosition,
+  tail,
+  food, foodPosition,
+  direction,
+  scene,
+}) {
+  resetNearPlaceholderCubesOpacity(previousRunSurroundingCubes);
+
+  const tailEndPosition = tail.length && tail[tail.length - 1].position.toArray();
+  moveTail(tail, headPosition);
+
+  moveHead(direction, headPosition);
+
+  if (checkBoundariesHit(...headPosition)) {
+    return [/*the end*/true];
+  } else {
+    console.log(headPosition, foodPosition);
+    if (eqPositions(headPosition, foodPosition)) {
+      tail.push(addTail(scene, tailEndPosition.map(getBoardPosition)));
+      foodPosition = updateFoodPosition(food, headPosition, tail);
+    }
+
+    // Move head:
+    head.position.set(...headPosition.map(getRealPosition));
+
+    // Hide "placeholder" cube in head's place:
+    cubeMap[headPosition[0]][headPosition[1]][headPosition[2]].visible = false;
+
+    // Make near cubes brighter:
+    previousRunSurroundingCubes = changeNearPlaceholderCubesOpacity(cubeMap, headPosition);
+
+    return [/*the end*/false, headPosition, foodPosition, tail];
+  }
+}
+
+// "Placeholder" cube goemetry:
 function cubeBufferGeometry( size ) {
   var h = size * 0.5;
   var geometry = new BufferGeometry();

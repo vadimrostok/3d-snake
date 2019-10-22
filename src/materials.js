@@ -13,6 +13,10 @@ export const SnakeTail = new MeshBasicMaterial( {
   color: 0xdd8800, emissive: 0x072534, side: DoubleSide, flatShading: true, fog: false,
 } );
 
+export const Food = new MeshBasicMaterial( {
+  color: 0x00dd88, emissive: 0x072534, side: DoubleSide, flatShading: true, fog: false,
+} );
+
 export const GuidePink = new MeshBasicMaterial( {
     color: 0x3500D3, emissive: 0x072534, side: DoubleSide, flatShading: true,
     transparent: true,

@@ -4,7 +4,7 @@ export const padding = 0.3;
 export const size = 8;
 export const sideSize = 1;
 
-export const boardSize = 12;
+export const boardSize = 5;
 export const cubeSize = 1; // snake cubes
 export const cubePointKoef = 0.33;
 export const cubePointDefaultOpacity = 0.1;
