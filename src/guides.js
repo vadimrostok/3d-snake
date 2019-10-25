@@ -1,18 +1,20 @@
-import { BoxGeometry, ConeGeometry, Mesh, Shape, ShapeGeometry } from 'three';
+import {
+  BoxGeometry, ConeGeometry, Mesh, Shape, ShapeGeometry, Quaternion, Vector3, AxesHelper, Euler,
+  Object3D
+} from 'three';
 import { GuidePink, GuideGreen } from './materials';
-import { boardSize, cubeSize, padding, guideConeWidth, guideConeHeight } from './config';
-import { getBoardHeight } from './helpers';
+import {
+  boardSize, cubeSize, padding,
+  bigGuideConeWidth, bigGuideConeHeight, bigGuideWidth, bigGuideLength,
+  smallGuideConeWidth, smallGuideConeHeight, smallGuideWidth, smallGuideLength,
+  boardHeight,
+} from './config';
 
-const coneGeometry = new ConeGeometry( guideConeWidth, guideConeHeight, 12 );
+const coneGeometry = new ConeGeometry( bigGuideConeWidth, bigGuideConeHeight, 12 );
 
-const guideLength = getBoardHeight(); //- guideConeHeight*2;
-const halfGuideLength = guideLength/2;
-const guideWidth = cubeSize/10;
-const halfGuideWidth = guideWidth/2;
-const halfBoardLength = getBoardHeight()/2;
-const halfConeWidth = guideConeWidth/2;
+const halfBoardLength = boardHeight/2;
 
-function getArrowShape() {
+function getArrowShape(guideWidth, guideLength, guideConeWidth, guideConeHeight) {
   const arrow = new Shape();
   
   arrow.moveTo(guideWidth/2, 0);
@@ -30,6 +32,44 @@ function getArrowShape() {
   arrow.lineTo(guideWidth/2, -guideLength/2 + guideConeHeight);
 
   return arrow;
+}
+
+export function addHeadGuides(head) {
+  const dimensions = {
+    xz: {
+      material: GuideGreen,
+      position(y, z) {
+        return [0, y*(halfBoardLength + padding), z*(halfBoardLength + padding)];
+      },
+      rotation() {
+        return [0, 0, Math.PI/2];
+      }
+    },
+    y: {
+      material: GuidePink,
+      position(x, y) {
+        return [x*(halfBoardLength + padding), y*(halfBoardLength + padding), 0];
+      },
+      rotation() {
+        return [0, Math.PI/2, 0];
+      }
+    }
+  };
+
+  return Object.keys(dimensions).map(dimension => {
+    const { material, position, rotation } = dimensions[dimension];
+    const ignoreDepthMaterial = material.clone();
+    ignoreDepthMaterial.depthTest = false;
+    //ignoreDepthMaterial.opacity = 1;
+    const guide = new Mesh( new ShapeGeometry(
+      getArrowShape(smallGuideWidth, smallGuideLength, smallGuideConeWidth, smallGuideConeHeight)
+    ), ignoreDepthMaterial);
+    guide.rotation.set(...rotation());
+    const wrapper = new Object3D();
+    wrapper.add(guide);
+    head.add(wrapper);
+    return wrapper;
+  });
 }
 
 export function addGuides(scene) {
@@ -66,7 +106,9 @@ export function addGuides(scene) {
   return Object.keys(dimensions).map(dimension => {
     const { material, position, rotation } = dimensions[dimension];
     return [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([otherDimension1, otherDimension2]) => {
-      const guide = new Mesh( new ShapeGeometry(getArrowShape()), material );
+      const guide = new Mesh( new ShapeGeometry(
+        getArrowShape(bigGuideWidth, bigGuideLength, bigGuideConeWidth, bigGuideConeHeight)
+      ), material);
       guide.position.set(...position(otherDimension1, otherDimension2));
       guide.rotation.set(...rotation(otherDimension1, otherDimension2));
       scene.add(guide);
@@ -76,7 +118,13 @@ export function addGuides(scene) {
 }
 
 
-export function updateGuides([xGuides, yGuides, zGuides], azimuthalRotationRads, polarRotation) {
+export function updateGuides(
+  [xGuides, yGuides, zGuides],
+  [xzHeadGuides, yHeadGuides],
+  azimuthalRotationRads,
+  polarRotation,
+  camera,
+) {
   const azimuthalRotation = azimuthalRotationRads*180/Math.PI;
   [xGuides, yGuides, zGuides].flat().forEach(guide => guide.visible = false);
   const angles = [
@@ -97,6 +145,11 @@ export function updateGuides([xGuides, yGuides, zGuides], azimuthalRotationRads,
 
   yGuides[3].visible = angles[3];
   zGuides[0].visible = zGuides[3].visible = angles[3] && angles[0];
+
+  yHeadGuides.rotation.y = Math.PI/2 + azimuthalRotationRads;
+
+  xzHeadGuides.rotation.y = azimuthalRotationRads;
+  xzHeadGuides.children[0].rotation.x = Math.PI/2 + polarRotation;
 
   yGuides[0].rotation.y = yGuides[1].rotation.y =
     yGuides[2].rotation.y = yGuides[3].rotation.y = azimuthalRotationRads;

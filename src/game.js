@@ -1,58 +1,25 @@
 import throttle from 'lodash/throttle';
 import * as THREE from 'three';
 import { OrbitControls } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
+import { DeviceOrientationControls }
+  from '../node_modules/three/examples/jsm/controls/DeviceOrientationControls.js';
 import { staticLights, addHeadLight } from './lights';
 import { boardSize, padding, sideSize,
          DIRECTION_xUP, DIRECTION_xDOWN,
          DIRECTION_yUP, DIRECTION_yDOWN,
          DIRECTION_zUP, DIRECTION_zDOWN, 
        } from './config';
-import { getRealPosition, boardPositionToCoordinates } from './helpers';
+import {
+  getRealPosition, boardPositionToCoordinates, isValidDirectionChange,
+  keyToGameDirection, tapToGameDirection,
+} from './helpers';
 import { addCubes, addHead, createNewFood, addTail, moveSnake } from './board';
-import { addGuides, updateGuides } from './guides';
+import { addGuides, addHeadGuides, updateGuides } from './guides';
 
 const TYPE_EMPTY = 0;
 const TYPE_BODY = 1;
 const TYPE_HEAD = 2;
 const TYPE_FOOD = 3;
-
-function hitTail() {
-  //
-}
-
-function trackDirectionChanges(getAngle, onChange, doExtraMove) {
-  document.addEventListener('keydown', function (e) {
-    const angle = getAngle();
-    const screenDirectionInversion = angle > -135 && angle < 45;
-    const useXPlane = angle > 135 || angle < -135 || (angle > -45 && angle < 45);
-
-    switch(e.keyCode) {
-    case 38: // up
-      onChange(DIRECTION_yUP);
-      break;
-    case 40: // down
-      onChange(DIRECTION_yDOWN);
-      break;
-    case 39: // right
-      if (useXPlane) {
-        onChange(screenDirectionInversion ? DIRECTION_xUP : DIRECTION_xDOWN);
-      } else {
-        onChange(screenDirectionInversion ? DIRECTION_zUP : DIRECTION_zDOWN);
-      }
-      break;
-    case 37: // left
-      if (useXPlane) {
-        onChange(screenDirectionInversion ? DIRECTION_xDOWN : DIRECTION_xUP);
-      } else {
-        onChange(screenDirectionInversion ? DIRECTION_zDOWN : DIRECTION_zUP);
-      }
-      break;
-    }
-    if ([37,38,39,40].indexOf(e.keyCode) !== -1) {
-      doExtraMove();
-    }
-  }, true);
-}
 
 export default function Game () {
   let time;
@@ -80,38 +47,61 @@ export default function Game () {
   controls.update();
   controls.enableKeys = false;
 
+  const extra = new DeviceOrientationControls(camera);
+
   const cubeMap = addCubes(scene);
   const [xGuides, yGuides, zGuides] = addGuides(scene);
 
-  let headPosition = [Math.floor(boardSize/3), Math.floor(boardSize/3), Math.floor(boardSize/3)];
-  const head = addHead(scene, headPosition);
-  let tail = [
-    addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 1]),
-    addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 2])
-  ];
-  let [foodPosition, food] = createNewFood(scene, headPosition, tail);
+  let headPosition, head, tail, food, foodPosition, xzHeadGuides, yHeadGuides,
+      theEnd, currentDirection;
+
+  function initRestartableObjects() {
+    headPosition = [Math.floor(boardSize/3), Math.floor(boardSize/3), Math.floor(boardSize/3)];
+    head = addHead(scene, headPosition);
+    tail = [
+      addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 1]),
+      addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 2]),
+      // addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 3]),
+      // addTail(scene, [headPosition[0], headPosition[1], headPosition[2] + 4]),
+    ];
+    [foodPosition, food] = createNewFood(scene, headPosition, tail);
+
+    [xzHeadGuides, yHeadGuides] = addHeadGuides(head);
+
+    theEnd = false;
+    currentDirection = DIRECTION_xUP;
+
+    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 0, -boardSize*2);
+    controls.update();
+
+    document.querySelector('#mobile-controls').style.opacity = '0';
+  }
+
+  function deleteRestartableObjects() {
+    scene.remove(head);
+    tail.concat([foodPosition, food, xzHeadGuides, yHeadGuides]).map(item => scene.remove(item));
+  }
+
+  initRestartableObjects();
 
   // FIXME:
   window.head = head;
+  window.scene = scene;
   window.tail = tail;
   window.cubeMap = cubeMap;
   window.canvas = renderer.domElement;
   window.camera = camera;
   window.controls = controls;
   window.guides = zGuides;
-
-  const multiplier = 2;
-  camera.position.set(0, 0, -boardSize*multiplier);
-
-  let theEnd = false;
-  let currentDirection = DIRECTION_xUP;
+  window.xzHeadGuides = xzHeadGuides;
 
   const logNode = document.querySelector('#log');
   function log() {
     const toLog = {};
     //toLog.angle = controls.getAzimuthalAngle();
-    toLog.AzimuthalAngleDeg = controls.getAzimuthalAngle()*180/Math.PI;
-    toLog.PolarAngleDeg = controls.getPolarAngle()*180/Math.PI;
+    //toLog.AzimuthalAngleDeg = controls.getAzimuthalAngle()*180/Math.PI;
+    //toLog.PolarAngleDeg = controls.getPolarAngle()*180/Math.PI;
 
     const logStr = Object.keys(toLog).map((key) => `${key}: ${toLog[key].toFixed(3)}<br />`).join('');
     logNode.innerHTML = logStr;
@@ -119,28 +109,96 @@ export default function Game () {
 
   return {
     initialize() {
-      this.move();
-      trackDirectionChanges(() => controls.getAzimuthalAngle()*180/Math.PI, (newDirection) => {
-        currentDirection = newDirection;
-      }, () => {
-        resetTime();
-        this.move();
-      });
-      controls.domElement.addEventListener('mousemove', throttle(function (e) {
-        if (e.buttons === 1) {
-          updateGuides(
-            [xGuides, yGuides, zGuides],
-            controls.getAzimuthalAngle(),
-            controls.getPolarAngle()
-          );
+
+      this.onKeyDown = (e) => {
+        const angle = controls.getAzimuthalAngle()*180/Math.PI;
+        const newDirection = keyToGameDirection(e.keyCode, angle);
+        if (newDirection && isValidDirectionChange(currentDirection, newDirection)) {
+          currentDirection = newDirection;
+          resetTime();
+          this.move();
         }
-      }, 100));
+      };
+      this.onMouseMove = throttle(function (e) {
+        if (e.buttons === 1) {
+          callUpdateGuides();
+        }
+      }, 50);
+
+      this.onTouchMove = throttle(function (e) {
+        callUpdateGuides();
+      }, 100);
+
+      this.onTouchStart = (e) => {
+        if (theEnd) {
+          document.querySelector('#the-end').style.display = 'none';
+          deleteRestartableObjects();
+          initRestartableObjects();
+          callUpdateGuides();
+          this.restartCb();
+          this.restartCb = null;
+        }
+        const x = e.touches[0].pageX;
+        const y = e.touches[0].pageY;
+        const angle = controls.getAzimuthalAngle()*180/Math.PI;
+        const newDirection = tapToGameDirection(x, y, angle);
+        if (newDirection && isValidDirectionChange(currentDirection, newDirection)) {
+          currentDirection = newDirection;
+          resetTime();
+          this.move();
+        }
+      };
+
+      this.move();
+
+      function callUpdateGuides() {
+        updateGuides(
+          [xGuides, yGuides, zGuides],
+          [xzHeadGuides, yHeadGuides],
+          controls.getAzimuthalAngle(),
+          controls.getPolarAngle(),
+          camera,
+        );
+      }
+
+      document.addEventListener('keydown', this.onKeyDown, true);
+      if (/Mobi|Android/i.test(navigator.userAgent)) {
+        controls.domElement.addEventListener('touchmove', this.onTouchMove);
+        controls.domElement.addEventListener('touchstart', this.onTouchStart);
+        window.setTimeout(() => {
+          document.querySelector('#mobile-controls').style.display = 'none';
+        }, 3000);
+      } else {
+        document.querySelector('#mobile-controls').style.display = 'none';
+        controls.domElement.addEventListener('mousemove', this.onMouseMove);
+      }
+      
       controls.update();
-      updateGuides(
-        [xGuides, yGuides, zGuides],
-        controls.getAzimuthalAngle(),
-        controls.getPolarAngle()
-      );
+      callUpdateGuides();
+
+      // Restart logic:
+      document.addEventListener('keydown', (e) => {
+        if (e.keyCode === 82 && !e.ctrlKey && !e.metaKey) {
+          const actions = () => {
+            deleteRestartableObjects();
+            initRestartableObjects();
+            document.querySelector('#the-end').style.display = 'none';
+            document.addEventListener('keydown', this.onKeyDown, true);
+            document.addEventListener('mousemove', this.onMouseMove);
+            callUpdateGuides();
+          };
+          if (this.restartCb) {
+            actions();
+            this.restartCb();
+            this.restartCb = null;
+          } else if (window.confirm('Are you sure you want to restart?')) {
+            actions();
+          }
+        };
+      }, true);
+    },
+    onReastart(cb) {
+      this.restartCb = cb;
     },
     tick() {},
     move() {
@@ -154,6 +212,8 @@ export default function Game () {
       });
       if (theEnd) {
         document.querySelector('#the-end').style.display = 'block';
+        document.removeEventListener('keydown', this.onKeyDown, true);
+        document.removeEventListener('mousemove', this.onMouseMove);
       }
     },
     update() {
@@ -165,9 +225,7 @@ export default function Game () {
       let timeDiff = 0;
       let logTimeDiff = 0;
 
-      const moveUpdateInterval = 10000;
-      // FIXME:
-      //const moveUpdateInterval = 1000;
+      const moveUpdateInterval = 2000;
 
       const logUpdateInterval = 100;
 

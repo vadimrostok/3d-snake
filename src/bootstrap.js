@@ -7,6 +7,8 @@ game.initialize();
 const animate = function() {
   if (game.onFrame()) {
     window.requestAnimationFrame(animate);
+  } else {
+    game.onReastart(animate);
   };
 };
 

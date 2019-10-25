@@ -4,7 +4,7 @@ export const padding = 0.3;
 export const size = 8;
 export const sideSize = 1;
 
-export const boardSize = 5;
+export const boardSize = 8;
 export const cubeSize = 1; // snake cubes
 export const cubePointKoef = 0.33;
 export const cubePointDefaultOpacity = 0.1;
@@ -22,5 +22,14 @@ export const DIRECTION_xDOWN = 4;
 export const DIRECTION_yUP = 5;
 export const DIRECTION_yDOWN = 6;
 
-export const guideConeWidth = cubeSize/2;
-export const guideConeHeight = cubeSize/2;
+export const boardHeight = boardSize*cubeSize + boardSize*cubeSize*padding;
+
+export const bigGuideLength = boardHeight;
+export const bigGuideWidth = cubeSize/10;
+export const bigGuideConeWidth = cubeSize/2;
+export const bigGuideConeHeight = cubeSize/2;
+
+export const smallGuideLength = cubeSize*3;
+export const smallGuideWidth = cubeSize/3;
+export const smallGuideConeWidth = cubeSize;
+export const smallGuideConeHeight = cubeSize/2;

@@ -11,11 +11,15 @@
 + cube movement control
 + snake: create food
 + snake: eat food grow tail
++ snake: constraint direction changes
++ snake: hit tail
++ show turn controls
++ add 3rd level guides
 +/- camera movements
-- show turn controls
-- snake: constraint direction changes
-- snake: hit tail
 - add webgl support check
 - use https://threejs.org/docs/#examples/en/controls/TrackballControls
-- add 3rd level guides
 - use pointer lock ?
+
+
+help:
+dir keys, wasd, restart button, 

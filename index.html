@@ -26,11 +26,56 @@
          margin: auto;
          top: 20px;
      }
+     #mobile-controls {
+         transition: opacity 0.5s 2s ease-in-out;
+     }
+     .top {
+         position: absolute;
+         top: 10px;
+         left: 50%;
+         transform: translate(-50%, 0%);
+         color: white;
+         font-size: 10em;
+         font-family: sans-serif;
+     }
+     .down {
+         position: absolute;
+         bottom: 10px;
+         left: 50%;
+         transform: translate(-50%, 0%);
+         color: white;
+         font-size: 10em;
+         font-family: sans-serif;
+     }
+     .left {
+         position: absolute;
+         left: 10px;
+         top: 50%;
+         transform: translate(0%, -50%);
+         color: white;
+         font-size: 10em;
+         font-family: sans-serif;
+     }
+     .right {
+         position: absolute;
+         right: 10px;
+         top: 50%;
+         transform: translate(0%, -50%);
+         color: white;
+         font-size: 10em;
+         font-family: sans-serif;
+     }
     </style>
   </head>
   <body>
     <div id="the-end">The end!</div>
     <div id="log">The end!</div>
+    <div id="mobile-controls">
+      <div class="top">Up</div>
+      <div class="down">Down</div>
+      <div class="left">Left</div>
+      <div class="right">Right</div>
+    </div>
     <script src="./build/bundle.js"></script>
   </body>
 </html>

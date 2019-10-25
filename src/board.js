@@ -7,7 +7,7 @@ import {
 import { SnakeHead, SnakeTail, Food, Dashed } from './materials';
 import {
   getRealPosition, checkBoundariesHit, eqPositions, resetNearPlaceholderCubesOpacity,
-  changeNearPlaceholderCubesOpacity, getBoardPosition,
+  changeNearPlaceholderCubesOpacity, getBoardPosition, checkTailHit,
 } from './helpers';
 import { cubeSize, boardSize, cubePointKoef,
          DIRECTION_xUP, DIRECTION_xDOWN,
@@ -104,7 +104,7 @@ function moveTail(tail, headPosition) {
   });
 }
 
-function moveHead(direction, headPosition) {
+function moveHead(direction, head, headPosition) {
   switch(direction) {
   case DIRECTION_xUP:
     headPosition[0] += 1;
@@ -126,6 +126,8 @@ function moveHead(direction, headPosition) {
     break;
   }
 
+  // Move head:
+  head.position.set(...headPosition.map(getRealPosition));
 }
 
 let previousRunSurroundingCubes = [];
@@ -142,19 +144,15 @@ export function moveSnake({
   const tailEndPosition = tail.length && tail[tail.length - 1].position.toArray();
   moveTail(tail, headPosition);
 
-  moveHead(direction, headPosition);
+  moveHead(direction, head, headPosition);
 
-  if (checkBoundariesHit(...headPosition)) {
-    return [/*the end*/true];
+  if (checkBoundariesHit(...headPosition) || checkTailHit(head, tail)) {
+    return [/*the end*/true, headPosition, foodPosition, tail];
   } else {
-    console.log(headPosition, foodPosition);
     if (eqPositions(headPosition, foodPosition)) {
       tail.push(addTail(scene, tailEndPosition.map(getBoardPosition)));
       foodPosition = updateFoodPosition(food, headPosition, tail);
     }
-
-    // Move head:
-    head.position.set(...headPosition.map(getRealPosition));
 
     // Hide "placeholder" cube in head's place:
     cubeMap[headPosition[0]][headPosition[1]][headPosition[2]].visible = false;
