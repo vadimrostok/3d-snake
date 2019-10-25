@@ -67,6 +67,7 @@ export function addHeadGuides(head) {
     guide.rotation.set(...rotation());
     const wrapper = new Object3D();
     wrapper.add(guide);
+    wrapper.visible = false;
     head.add(wrapper);
     return wrapper;
   });

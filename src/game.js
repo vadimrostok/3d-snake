@@ -167,7 +167,7 @@ export default function Game () {
         controls.domElement.addEventListener('touchstart', this.onTouchStart);
         window.setTimeout(() => {
           document.querySelector('#mobile-controls').style.display = 'none';
-        }, 3000);
+        }, 6000);
       } else {
         document.querySelector('#mobile-controls').style.display = 'none';
         controls.domElement.addEventListener('mousemove', this.onMouseMove);
